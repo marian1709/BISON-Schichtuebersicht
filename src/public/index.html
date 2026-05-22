@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BISON Schichtuebersicht</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="screen">
+      <header class="header">
+        <div>
+          <p class="eyebrow">Produktion</p>
+          <h1>Schichtuebersicht</h1>
+        </div>
+        <div class="meta">
+          <span id="warning" class="warning" hidden>Daten konnten zuletzt nicht aktualisiert werden</span>
+          <span id="updatedAt">Zuletzt aktualisiert: --:--</span>
+        </div>
+      </header>
+
+      <section id="days" class="days" aria-live="polite"></section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

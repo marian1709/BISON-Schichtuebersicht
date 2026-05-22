@@ -1,0 +1,23 @@
+{
+  "name": "bison-schichtuebersicht",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Datenschutzfreundliche 7-Tage-Schichtuebersicht fuer Planday und TV-Kiosk-Anzeigen.",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon --ignore data --ignore .env src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

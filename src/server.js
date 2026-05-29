@@ -161,13 +161,16 @@ app.disable('x-powered-by');
 app.set('trust proxy', true);
 app.use(
   helmet({
+    crossOriginOpenerPolicy: false,
+    originAgentCluster: false,
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
         styleSrc: ["'self'"],
         imgSrc: ["'self'"],
-        connectSrc: ["'self'"]
+        connectSrc: ["'self'"],
+        upgradeInsecureRequests: null
       }
     }
   })

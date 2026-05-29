@@ -155,6 +155,8 @@ Die App ist danach unter `http://localhost:3000` erreichbar, sofern `PORT=3000` 
 
 Der Refresh Token wird bei Docker in `./data` auf dem Host gespeichert, weil `docker-compose.yml` dieses Verzeichnis als Volume einbindet.
 
+Bei Betrieb direkt per HTTP im internen Netz, z. B. `http://192.168.x.x:3020`, liefert die App keine automatische HTTPS-Aufwertung fuer statische Assets aus. Wenn die App spaeter ueber das Internet oder ein weniger vertrauenswuerdiges Netz erreichbar ist, sollte HTTPS vor die App gesetzt werden, z. B. per Reverse Proxy.
+
 ## Healthcheck
 
 Der Healthcheck-Endpunkt liegt unter:

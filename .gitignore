@@ -1,5 +1,6 @@
 node_modules/
 .env
+config/schedule.json
 data/
 npm-debug.log
 *.log

@@ -1,0 +1,11 @@
+{
+  "departmentIds": [12345],
+  "teams": [
+    {
+      "name": "Team A",
+      "color": "#FA7E01",
+      "leaders": [1001],
+      "substitutes": [2001]
+    }
+  ]
+}

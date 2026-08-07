@@ -121,10 +121,6 @@ export class PlandayClient {
     return this.fetchSetupList(this.config.departmentsPath);
   }
 
-  async listShiftGroups() {
-    return this.fetchSetupList(this.config.shiftGroupsPath);
-  }
-
   async fetchSetupList(resourcePath) {
     const token = await this.getAccessToken();
     const response = await fetch(joinUrl(this.config.apiBaseUrl, resourcePath), {

@@ -5,91 +5,13 @@ import express from 'express';
 import helmet from 'helmet';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadConfig } from './config.js';
 import { PlandayClient } from './services/plandayClient.js';
 import { ShiftCache } from './services/shiftCache.js';
 import { TokenStore } from './services/tokenStore.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const toNumber = (value, fallback) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-};
-
-function parseList(value) {
-  if (!value) return [];
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .map((item) => Number(item))
-    .filter(Number.isFinite);
-}
-
-function parseShiftGroups(value) {
-  if (!value) return new Map();
-
-  try {
-    const parsed = JSON.parse(value);
-    return new Map(Object.entries(parsed).map(([id, name]) => [String(id), String(name)]));
-  } catch {
-    return new Map(
-      value
-        .split(';')
-        .map((entry) => entry.trim())
-        .filter(Boolean)
-        .map((entry) => {
-          const [id, ...nameParts] = entry.split(':');
-          return [String(id).trim(), nameParts.join(':').trim()];
-        })
-        .filter(([id, name]) => id && name)
-    );
-  }
-}
-
-function parsePeriodRules(value) {
-  if (!value) return [];
-
-  try {
-    const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed
-      .map((rule) => ({
-        period: rule.period,
-        shiftTypeIds: (rule.shiftTypeIds ?? []).map(String),
-        categoryIds: (rule.categoryIds ?? []).map(String),
-        employeeGroupIds: (rule.employeeGroupIds ?? []).map(String),
-        departmentIds: (rule.departmentIds ?? []).map(String)
-      }))
-      .filter((rule) => ['early', 'late', 'night'].includes(rule.period));
-  } catch {
-    console.warn('PLANDAY_PERIOD_RULES could not be parsed. Falling back to start-time classification.');
-    return [];
-  }
-}
-
-function parseTeamRules(value) {
-  if (!value) return [];
-
-  try {
-    const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed
-      .map((rule) => ({
-        team: String(rule.team ?? '').trim(),
-        color: String(rule.color ?? '').trim(),
-        leaderEmployeeIds: (rule.leaderEmployeeIds ?? []).map(String),
-        substituteEmployeeIds: (rule.substituteEmployeeIds ?? []).map(String)
-      }))
-      .filter((rule) => rule.team && rule.color);
-  } catch {
-    console.warn('PLANDAY_TEAM_RULES could not be parsed. Falling back to category/employee-group mapping.');
-    return [];
-  }
-}
 
 function publicBaseUrl(req) {
   return `${req.protocol}://${req.get('host')}`;
@@ -114,35 +36,7 @@ function sanitizeSetupList(payload) {
     .sort((a, b) => a.name.localeCompare(b.name, 'de'));
 }
 
-const config = {
-  port: toNumber(process.env.PORT, 3000),
-  cacheTtlMs: toNumber(process.env.CACHE_TTL_MS, 5 * 60 * 1000),
-  refreshIntervalMs: toNumber(process.env.REFRESH_INTERVAL_MS, 5 * 60 * 1000),
-  frontendPollMs: toNumber(process.env.FRONTEND_POLL_MS, 60 * 1000),
-  dayCount: toNumber(process.env.DAY_COUNT, 7),
-  shiftGroups: parseShiftGroups(process.env.PLANDAY_SHIFT_GROUPS),
-  periodRules: parsePeriodRules(process.env.PLANDAY_PERIOD_RULES),
-  teamRules: parseTeamRules(process.env.PLANDAY_TEAM_RULES),
-  setupToken: process.env.SETUP_TOKEN,
-  plandayTokenFile: process.env.PLANDAY_TOKEN_FILE ?? path.join(process.cwd(), 'data', 'planday-token.json'),
-  planday: {
-    apiBaseUrl: process.env.PLANDAY_API_BASE_URL ?? 'https://openapi.planday.com',
-    authorizeUrl: process.env.PLANDAY_AUTHORIZE_URL ?? 'https://id.planday.com/connect/authorize',
-    tokenUrl: process.env.PLANDAY_TOKEN_URL ?? 'https://id.planday.com/connect/token',
-    clientId: process.env.PLANDAY_CLIENT_ID,
-    clientSecret: process.env.PLANDAY_CLIENT_SECRET,
-    refreshToken: process.env.PLANDAY_REFRESH_TOKEN,
-    redirectUri: process.env.PLANDAY_REDIRECT_URI,
-    scopes: process.env.PLANDAY_SCOPES ?? 'openid offline_access shift:read',
-    shiftsPath: process.env.PLANDAY_SHIFTS_PATH ?? '/scheduling/v1.0/shifts',
-    shiftsMethod: process.env.PLANDAY_SHIFTS_METHOD ?? 'GET',
-    shiftsLimit: toNumber(process.env.PLANDAY_SHIFTS_LIMIT, 300),
-    departmentsPath: process.env.PLANDAY_DEPARTMENTS_PATH ?? '/hr/v1/Departments',
-    shiftGroupsPath: process.env.PLANDAY_SHIFT_GROUPS_PATH ?? '/hr/v1/EmployeeGroups',
-    departmentIds: parseList(process.env.PLANDAY_DEPARTMENT_IDS),
-    shiftStatus: process.env.PLANDAY_SHIFT_STATUS
-  }
-};
+const config = loadConfig();
 
 const app = express();
 const oauthStates = new Map();
@@ -150,8 +44,6 @@ const tokenStore = new TokenStore(config.plandayTokenFile);
 const plandayClient = new PlandayClient(config.planday, tokenStore);
 const shiftCache = new ShiftCache({
   client: plandayClient,
-  shiftGroups: config.shiftGroups,
-  periodRules: config.periodRules,
   teamRules: config.teamRules,
   cacheTtlMs: config.cacheTtlMs,
   dayCount: config.dayCount
@@ -274,16 +166,6 @@ app.get('/setup/planday/departments', requireSetupAuth, async (req, res) => {
   }
 });
 
-app.get('/setup/planday/shift-groups', requireSetupAuth, async (req, res) => {
-  try {
-    const shiftGroups = sanitizeSetupList(await plandayClient.listShiftGroups());
-    res.json({ shiftGroups });
-  } catch (error) {
-    console.error('Planday shift group list failed:', error.message);
-    res.status(502).json({ error: 'Could not load shift groups from Planday.' });
-  }
-});
-
 app.get('/api/shifts', async (req, res) => {
   await shiftCache.refreshIfNeeded();
   res.json({
@@ -298,9 +180,6 @@ app.get('*', (req, res) => {
 
 const server = app.listen(config.port, async () => {
   console.log(`Shift display app listening on port ${config.port}`);
-  if (config.shiftGroups.size === 0) {
-    console.warn('PLANDAY_SHIFT_GROUPS is empty. No shift groups will be shown until it is configured.');
-  }
   await shiftCache.refreshIfNeeded({ force: true });
 });
 

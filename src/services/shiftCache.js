@@ -50,39 +50,8 @@ function shiftEnd(shift) {
   return pickFirst(shift.end, shift.endDateTime, shift.shiftEnd, shift.endTime);
 }
 
-function categoryIdFrom(entry, shift) {
-  return pickFirst(
-    shift.categoryId,
-    shift.category_id,
-    shift.scheduleCategoryId,
-    shift.schedule_category_id,
-    shift.category?.id,
-    entry.categoryId,
-    entry.category_id,
-    entry.scheduleCategoryId,
-    entry.schedule_category_id,
-    entry.category?.id
-  );
-}
-
-function shiftTypeIdFrom(entry, shift) {
-  return pickFirst(shift.shiftTypeId, shift.shift_type_id, entry.shiftTypeId, entry.shift_type_id);
-}
-
 function employeeIdFrom(entry, shift) {
   return pickFirst(shift.employeeId, shift.employee_id, entry.employeeId, entry.employee_id);
-}
-
-function employeeGroupIdFrom(entry, shift) {
-  return pickFirst(shift.employeeGroupId, shift.employee_group_id, entry.employeeGroupId, entry.employee_group_id);
-}
-
-function departmentIdFrom(entry, shift) {
-  return pickFirst(shift.departmentId, shift.department_id, entry.departmentId, entry.department_id);
-}
-
-function groupIdFrom(entry, shift) {
-  return pickFirst(categoryIdFrom(entry, shift), employeeGroupIdFrom(entry, shift));
 }
 
 function dateFromShift(shift) {
@@ -116,13 +85,6 @@ function shiftPeriodFromStart(value) {
   return { key: 'night', label: 'Nachtschicht' };
 }
 
-const periodConfig = new Map([
-  ['early', { key: 'early', label: 'Frühschicht' }],
-  ['late', { key: 'late', label: 'Spätschicht' }],
-  ['night', { key: 'night', label: 'Nachtschicht' }],
-  ['unknown', { key: 'unknown', label: 'Schicht' }]
-]);
-
 const periodOrder = new Map([
   ['early', 1],
   ['late', 2],
@@ -140,10 +102,8 @@ function emptyPublicData(dayCount) {
 }
 
 export class ShiftCache {
-  constructor({ client, shiftGroups, periodRules, teamRules, cacheTtlMs, dayCount }) {
+  constructor({ client, teamRules, cacheTtlMs, dayCount }) {
     this.client = client;
-    this.shiftGroups = shiftGroups;
-    this.periodRules = periodRules;
     this.teamRules = teamRules;
     this.cacheTtlMs = cacheTtlMs;
     this.dayCount = dayCount;
@@ -217,39 +177,41 @@ export class ShiftCache {
 
     for (const entry of asArray(rawPayload)) {
       const shift = pickShiftData(entry);
-      const period = this.periodForShift(entry, shift);
-      if (!period) continue;
+      const period = shiftPeriodFromStart(shiftStart(shift));
 
       const date = dateFromShift(shift);
       const day = daysByDate.get(date);
       if (!day) continue;
 
-      if (this.teamRules.length > 0) {
-        const candidate = this.teamCandidateForShift(entry, shift);
-        if (!candidate) continue;
+      const candidate = this.teamCandidateForShift(entry, shift);
+      if (!candidate) continue;
 
-        const bucketKey = `${date}|${period.key}`;
-        const bucket = teamCandidates.get(bucketKey) ?? {
-          day,
-          period,
-          leaders: [],
-          substitutes: []
-        };
-        bucket[candidate.role].push(candidate);
-        teamCandidates.set(bucketKey, bucket);
-        continue;
-      }
-
-      const groupId = groupIdFrom(entry, shift);
-      const groupName = this.shiftGroups.get(String(groupId));
-      if (!groupName) continue;
-
-      this.addPublicShift(day, period, { groupName }, dedupe);
+      const bucketKey = `${date}|${period.key}`;
+      const bucket = teamCandidates.get(bucketKey) ?? {
+        day,
+        period,
+        teams: new Map()
+      };
+      const team = bucket.teams.get(candidate.groupName) ?? {
+        ...candidate,
+        leaderIds: new Set(),
+        substituteIds: new Set()
+      };
+      team[candidate.role].add(candidate.employeeId);
+      bucket.teams.set(candidate.groupName, team);
+      teamCandidates.set(bucketKey, bucket);
     }
 
     for (const bucket of teamCandidates.values()) {
-      const candidates = bucket.leaders.length > 0 ? bucket.leaders : bucket.substitutes;
-      const selected = candidates.sort((a, b) => a.priority - b.priority)[0];
+      const selected = [...bucket.teams.values()].sort((a, b) => {
+        const aMatches = a.leaderIds.size + a.substituteIds.size;
+        const bMatches = b.leaderIds.size + b.substituteIds.size;
+        return (
+          bMatches - aMatches ||
+          Number(b.leaderIds.size > 0) - Number(a.leaderIds.size > 0) ||
+          a.priority - b.priority
+        );
+      })[0];
       if (selected) this.addPublicShift(bucket.day, bucket.period, selected, dedupe);
     }
 
@@ -277,31 +239,6 @@ export class ShiftCache {
     });
   }
 
-  periodForShift(entry, shift) {
-    const rulePeriod = this.periodFromRules(entry, shift);
-    if (rulePeriod) return rulePeriod;
-    if (this.periodRules.length > 0) return null;
-
-    return shiftPeriodFromStart(shiftStart(shift));
-  }
-
-  periodFromRules(entry, shift) {
-    const shiftTypeId = String(shiftTypeIdFrom(entry, shift) ?? '');
-    const categoryId = String(categoryIdFrom(entry, shift) ?? '');
-    const employeeGroupId = String(employeeGroupIdFrom(entry, shift) ?? '');
-    const departmentId = String(departmentIdFrom(entry, shift) ?? '');
-
-    const matchedRule = this.periodRules.find((rule) => {
-      const matchesShiftType = rule.shiftTypeIds.includes(shiftTypeId);
-      const matchesCategory = rule.categoryIds.includes(categoryId);
-      const matchesGroup = rule.employeeGroupIds.includes(employeeGroupId);
-      const matchesDepartment = rule.departmentIds.includes(departmentId);
-      return matchesShiftType || matchesCategory || matchesGroup || matchesDepartment;
-    });
-
-    return matchedRule ? periodConfig.get(matchedRule.period) : null;
-  }
-
   teamCandidateForShift(entry, shift) {
     const employeeId = String(employeeIdFrom(entry, shift) ?? '');
     if (!employeeId) return null;
@@ -313,7 +250,8 @@ export class ShiftCache {
         groupName: leaderRule.team,
         color: leaderRule.color,
         priority: leaderIndex,
-        role: 'leaders'
+        role: 'leaderIds',
+        employeeId
       };
     }
 
@@ -324,7 +262,8 @@ export class ShiftCache {
         groupName: substituteRule.team,
         color: substituteRule.color,
         priority: substituteIndex,
-        role: 'substitutes'
+        role: 'substituteIds',
+        employeeId
       };
     }
 

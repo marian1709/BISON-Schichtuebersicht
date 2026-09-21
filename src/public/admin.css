@@ -1,0 +1,268 @@
+:root {
+  color-scheme: dark;
+  --bg: #07111f;
+  --panel: #10233a;
+  --panel-border: #294967;
+  --text: #f5f8fc;
+  --muted: #a9bdd2;
+  --accent: #38bdf8;
+  --danger: #fb7185;
+  --success: #4ade80;
+  font-family: Inter, Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, #17355a, var(--bg) 45%);
+  color: var(--text);
+}
+
+button,
+.button,
+input,
+select {
+  font: inherit;
+}
+
+button,
+.button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: var(--accent);
+  color: #031525;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.button-secondary,
+.icon-button {
+  border-color: var(--panel-border);
+  background: transparent;
+  color: var(--text);
+}
+
+.admin-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 40px 0 120px;
+}
+
+.admin-header,
+.section-heading,
+.connection-panel,
+.team-card-header,
+.save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.admin-header {
+  margin-bottom: 28px;
+}
+
+.admin-header nav,
+.save-bar > div,
+.team-actions {
+  display: flex;
+  gap: 10px;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: clamp(34px, 5vw, 58px);
+}
+
+h2 {
+  margin-bottom: 6px;
+}
+
+.eyebrow {
+  margin-bottom: 6px;
+  color: var(--accent);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.panel,
+.login-card,
+.team-card {
+  border: 1px solid var(--panel-border);
+  border-radius: 20px;
+  background: rgb(16 35 58 / 94%);
+  box-shadow: 0 18px 60px rgb(0 0 0 / 20%);
+}
+
+.panel {
+  margin-bottom: 22px;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(520px, 100%);
+  margin: 12vh auto 0;
+  padding: 34px;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+input,
+select {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid #45627d;
+  border-radius: 10px;
+  outline: none;
+  background: #091a2d;
+  color: var(--text);
+}
+
+input:focus,
+select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(56 189 248 / 18%);
+}
+
+.login-card form {
+  display: grid;
+  gap: 16px;
+}
+
+.message {
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: #132c47;
+}
+
+.message-error {
+  border-color: var(--danger);
+  color: #fecdd3;
+}
+
+.message-success {
+  border-color: var(--success);
+  color: #bbf7d0;
+}
+
+.team-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.team-card {
+  padding: 20px;
+}
+
+.team-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--team-color, var(--accent));
+}
+
+.icon-button {
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.remove-team {
+  border-color: rgb(251 113 133 / 55%);
+  color: #fecdd3;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.color-field {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 8px;
+}
+
+.team-color-picker {
+  padding: 4px;
+}
+
+.save-bar {
+  position: fixed;
+  z-index: 10;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 16px max(24px, calc((100vw - 1180px) / 2));
+  border-top: 1px solid var(--panel-border);
+  background: rgb(7 17 31 / 96%);
+  box-shadow: 0 -10px 36px rgb(0 0 0 / 28%);
+}
+
+@media (max-width: 760px) {
+  .admin-header,
+  .section-heading,
+  .connection-panel,
+  .team-card-header,
+  .save-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-header nav,
+  .team-actions {
+    flex-wrap: wrap;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .save-bar {
+    padding: 14px 16px;
+  }
+}

@@ -29,6 +29,10 @@ export class PlandayClient {
     this.accessTokenExpiresAt = 0;
   }
 
+  setDepartmentIds(departmentIds) {
+    this.config.departmentIds = departmentIds.map(String);
+  }
+
   async fetchShifts({ from, to }) {
     assertRequired('PLANDAY_CLIENT_ID', this.config.clientId);
 
@@ -118,12 +122,62 @@ export class PlandayClient {
   }
 
   async listDepartments() {
-    return this.fetchSetupList(this.config.departmentsPath);
+    return this.fetchPagedList(this.config.departmentsPath);
   }
 
-  async fetchSetupList(resourcePath) {
+  async listEmployees({ departmentId, searchQuery } = {}) {
+    const query = {};
+    if (departmentId) query.departmentId = String(departmentId);
+    if (searchQuery) query.searchQuery = String(searchQuery);
+
+    const employees = await this.fetchPagedList(this.config.employeesPath, query);
+    if (!departmentId) return employees;
+
+    const wantedDepartment = String(departmentId);
+    return employees.filter((employee) => {
+      const primaryDepartment = employee.primaryDepartmentId ?? employee.departmentId;
+      const departmentIds =
+        employee.departmentIds ??
+        employee.departments?.map((department) =>
+          typeof department === 'object' && department !== null
+            ? department.id ?? department.departmentId
+            : department
+        ) ??
+        [];
+      if (primaryDepartment === undefined && departmentIds.length === 0) return true;
+      return (
+        String(primaryDepartment ?? '') === wantedDepartment ||
+        departmentIds.map(String).includes(wantedDepartment)
+      );
+    });
+  }
+
+  async fetchPagedList(resourcePath, query = {}) {
+    const limit = 50;
+    const allItems = [];
+
+    for (let offset = 0; offset < 5000; offset += limit) {
+      const payload = await this.fetchSetupList(resourcePath, { ...query, limit, offset });
+      const items = Array.isArray(payload)
+        ? payload
+        : payload?.data ?? payload?.items ?? payload?.results ?? [];
+      allItems.push(...items);
+      if (items.length < limit) break;
+    }
+
+    return allItems;
+  }
+
+  async fetchSetupList(resourcePath, query = {}) {
     const token = await this.getAccessToken();
-    const response = await fetch(joinUrl(this.config.apiBaseUrl, resourcePath), {
+    const url = new URL(joinUrl(this.config.apiBaseUrl, resourcePath));
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== null && value !== '') {
+        url.searchParams.set(key, String(value));
+      }
+    }
+
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
         'X-ClientId': this.config.clientId,

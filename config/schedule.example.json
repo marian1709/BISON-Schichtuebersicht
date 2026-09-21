@@ -1,11 +1,13 @@
 {
-  "departmentIds": [12345],
+  "version": 2,
+  "departmentId": "12345",
   "teams": [
     {
+      "id": "team-a",
       "name": "Team A",
       "color": "#FA7E01",
-      "leaders": [1001],
-      "substitutes": [2001]
+      "leaderEmployeeId": "1001",
+      "substituteEmployeeId": "2001"
     }
   ]
 }

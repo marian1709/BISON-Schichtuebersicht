@@ -68,6 +68,12 @@ h1 {
   color: var(--warning);
 }
 
+.admin-link {
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 600;
+}
+
 .days {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));

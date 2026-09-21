@@ -130,6 +130,11 @@ export class ShiftCache {
     };
   }
 
+  setTeamRules(teamRules) {
+    this.teamRules = teamRules;
+    this.publicData.generatedAt = null;
+  }
+
   isStale() {
     if (!this.publicData.generatedAt) return true;
     return Date.now() - new Date(this.publicData.generatedAt).getTime() >= this.cacheTtlMs;

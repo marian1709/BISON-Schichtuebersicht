@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Administration · BISON Schichtübersicht</title>
+    <link rel="stylesheet" href="/admin.css" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <section id="loginView" class="login-card" hidden>
+        <p class="eyebrow">Administration</p>
+        <h1>Schichtübersicht verwalten</h1>
+        <p class="muted">Melde dich mit dem in <code>ADMIN_PASSWORD</code> hinterlegten Passwort an.</p>
+        <form id="loginForm">
+          <label for="password">Adminpasswort</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+          <button type="submit">Anmelden</button>
+        </form>
+        <p id="loginError" class="message message-error" hidden></p>
+      </section>
+
+      <section id="adminView" hidden>
+        <header class="admin-header">
+          <div>
+            <p class="eyebrow">Administration</p>
+            <h1>Schichtübersicht konfigurieren</h1>
+          </div>
+          <nav>
+            <a class="button button-secondary" href="/" target="_blank" rel="noopener">Anzeige öffnen</a>
+            <button id="logoutButton" class="button button-secondary" type="button">Abmelden</button>
+          </nav>
+        </header>
+
+        <div id="message" class="message" hidden></div>
+
+        <section class="panel connection-panel">
+          <div>
+            <h2>Planday-Verbindung</h2>
+            <p id="connectionStatus" class="muted">Status wird geladen …</p>
+          </div>
+          <a id="connectButton" class="button button-secondary" href="/api/admin/planday/authorize">
+            Mit Planday verbinden
+          </a>
+        </section>
+
+        <form id="configForm">
+          <section class="panel">
+            <div class="section-heading">
+              <div>
+                <h2>Department</h2>
+                <p class="muted">Nur aktive Accounts dieses Departments stehen zur Auswahl.</p>
+              </div>
+              <button id="reloadAccountsButton" class="button button-secondary" type="button">
+                Accounts neu laden
+              </button>
+            </div>
+            <label for="department">Department</label>
+            <select id="department" required>
+              <option value="">Bitte auswählen</option>
+            </select>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <div>
+                <h2>Teams</h2>
+                <p class="muted">Pro Team wird genau eine Führung und eine Stellvertretung festgelegt.</p>
+              </div>
+              <button id="addTeamButton" type="button">Team hinzufügen</button>
+            </div>
+            <div id="teams" class="team-list"></div>
+          </section>
+
+          <div class="save-bar">
+            <span id="dirtyState">Keine ungespeicherten Änderungen</span>
+            <div>
+              <button id="discardButton" class="button button-secondary" type="button" disabled>
+                Verwerfen
+              </button>
+              <button id="saveButton" type="submit" disabled>Speichern</button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <template id="teamTemplate">
+      <article class="team-card">
+        <div class="team-card-header">
+          <div class="team-preview"><span class="team-dot"></span><strong class="team-preview-name">Team</strong></div>
+          <div class="team-actions">
+            <button class="icon-button move-up" type="button" aria-label="Team nach oben">↑</button>
+            <button class="icon-button move-down" type="button" aria-label="Team nach unten">↓</button>
+            <button class="icon-button remove-team" type="button" aria-label="Team löschen">Löschen</button>
+          </div>
+        </div>
+        <div class="form-grid">
+          <label>
+            Teamname
+            <input class="team-name" type="text" maxlength="80" required />
+          </label>
+          <label>
+            Farbe
+            <span class="color-field">
+              <input class="team-color-picker" type="color" />
+              <input class="team-color" type="text" pattern="#[0-9A-Fa-f]{6}" maxlength="7" required />
+            </span>
+          </label>
+          <label>
+            Führender Account
+            <select class="team-leader" required></select>
+          </label>
+          <label>
+            Stellvertretender Account
+            <select class="team-substitute" required></select>
+          </label>
+        </div>
+      </article>
+    </template>
+
+    <script src="/admin.js" type="module"></script>
+  </body>
+</html>
